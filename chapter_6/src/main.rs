@@ -103,11 +103,11 @@ fn operator_parser_test() {
 #[test]
 fn number_parser_test() {
     assert_eq!(output(number_parser("  1".as_bytes())), Expression::Number(1));
-    assert_eq!(output(number_parser(" 10   ".as_bytes())), Expression::Number(10))
+    assert_eq!(output(number_parser(" 10   ".as_bytes())), Expression::Number(10));
 }
 
 #[test]
 fn expression_parser_test() {
    assert_eq!(output(expression_parser(" 1".as_bytes())), Expression::Number(1));
-   assert_eq!(output(expression_parser("+ 
+   assert_eq!(output(expression_parser("+ 1 2 3".as_bytes())), Expression::Expr(Operator:: Plus, vec![Expression::Number(1), Expression::Number(2), Expression::Number(3)]));
 }
