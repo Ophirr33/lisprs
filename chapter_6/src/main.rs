@@ -71,17 +71,31 @@ named!(
     
 named!(
     expression_parser<Expression>,
-    map_res!(
         alt!(
             number_parser | 
-            do_parse!(
-                operator: operator_parser >>
-                tag!(" ") >>
-                expression_vec: ws!(delimited!(tag!("(", many1!(expression_parser), tag!(")")))) >> 
-                (operator, expression_vec)))
+            map_res!(
+                do_parse!(
+                    operator: operator_parser >>
+                    tag!(" ") >>
+                    expression_vec: ws!(delimited!(tag!("(", many1!(expression_parser), tag!(")")))) >> 
+                    (operator, expression_vec))
+                Expression::from_tuple)));
+
+named!(
+    program_start_parser<Expression>,
+    map_res!(
+        do_parse!(
+            operator: operator_parser >>
+            tag!(" ") >>
+            expression_vec: ws!(many1!(expression_parser)) >>
+            (operator, expression_vec)),
         Expression::from_tuple));
+            
 
 fn main() {
+
+
+
 
 }
 
@@ -109,5 +123,27 @@ fn number_parser_test() {
 #[test]
 fn expression_parser_test() {
    assert_eq!(output(expression_parser(" 1".as_bytes())), Expression::Number(1));
-   assert_eq!(output(expression_parser("+ 1 2 3".as_bytes())), Expression::Expr(Operator:: Plus, vec![Expression::Number(1), Expression::Number(2), Expression::Number(3)]));
+   assert_eq!(output(program_start_parser("+ 1 2 3".as_bytes())), Expression::Expr(Operator:: Plus, vec![Expression::Number(1), Expression::Number(2), Expression::Number(3)]));
+   assert_eq!(output(program_start_parser("+ (* (- 7 1) 2 3) 2 (/ 3 3)".as_bytes())), 
+              Expression::Expr(
+                  Operator:: Plus,
+                  vec![
+                  Expression::Expr(
+                      Operator::Mul, 
+                      vec![
+                      Expression::Expr(
+                          Operator::Sub, 
+                          vec![
+                          Expression::Number(7), 
+                          Expression::Number(1)]), 
+                      Expression::Number(2),
+                      Expression::Number(3)]),
+                  Expression::Number(2),
+                  Expression::Expr(
+                      Operator::Div,
+                      vec![
+                      Expression::Num(3),
+                      Expression::Num(3)])]));
+
+                 
 }
