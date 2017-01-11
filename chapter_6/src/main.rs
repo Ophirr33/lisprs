@@ -25,6 +25,16 @@ impl Expression {
             Ok(Expression::Expr(op, exprs))
         }
     }
+
+    fn eval(&self) -> usize {
+        match *self {
+            Expression::Number(usize) => usize,
+            Expression::Expr(Operator::Add, ref expr) => expr.iter().fold(0, |a, b| a + b.eval()),
+            Expression::Expr(Operator::Sub, ref expr) => expr.iter().skip(1).fold(expr[0].eval(), |a, b| a - b.eval()),
+            Expression::Expr(Operator::Mul, ref expr) => expr.iter().fold(1, |a, b| a * b.eval()),
+            Expression::Expr(Operator::Div, ref expr) => expr.iter().skip(1).fold(expr[0].eval(), |a, b| a / b.eval())
+        }
+    }
 }
 
 impl Operator {
@@ -69,17 +79,17 @@ named!(
             FromStr::from_str),
         Expression::from_usize));
 
-// named!(
-//     expression_parser<Expression>,
-//         alt!(
-//             number_parser |
-//             map_res!(
-//                 do_parse!(
-//                     operator: operator_parser >>
-//                     tag!(" ") >>
-//                     expression_vec: ws!(delimited!(tag!("(", many1!(expression_parser), tag!(")")))) >>
-//                     (operator, expression_vec))
-//                 Expression::from_tuple)));
+named!(
+    expression_parser<Expression>,
+        alt!(
+            number_parser |
+            map_res!(
+                do_parse!(
+                    operator: operator_parser >>
+                    tag!(" ") >>
+                    expression_vec: ws!(delimited!(tag!("("), many1!(expression_parser), tag!(")"))) >>
+                    (operator, expression_vec)),
+                Expression::from_tuple)));
 
 named!(
     program_start_parser<Expression>,
@@ -99,10 +109,11 @@ fn main() {
 
 }
 
-fn output<I, O>(iresult: nom::IResult<I, O>) -> O {
+fn output<I, O>(iresult: nom::IResult<I, O>) -> O 
+    where O: std::fmt::Debug, I: std::fmt::Debug {
     match iresult {
         IResult::Done(_, output) => output,
-        _ => panic!("Not a Done")
+        _ => { println!("{:?}", iresult); panic!("Not a Done") }
     }
 }
 
@@ -123,10 +134,10 @@ fn number_parser_test() {
 #[test]
 fn expression_parser_test() {
    assert_eq!(output(expression_parser(" 1".as_bytes())), Expression::Number(1));
-   assert_eq!(output(program_start_parser("+ 1 2 3".as_bytes())), Expression::Expr(Operator:: Plus, vec![Expression::Number(1), Expression::Number(2), Expression::Number(3)]));
-   assert_eq!(output(program_start_parser("+ (* (- 7 1) 2 3) 2 (/ 3 3)".as_bytes())),
+   assert_eq!(output(program_start_parser("+ 1 2 3".as_bytes())), Expression::Expr(Operator::Add, vec![Expression::Number(1), Expression::Number(2), Expression::Number(3)]));
+   assert_eq!(output(program_start_parser("+ * (- (7 1) 2 3) 2 / (3 3)".as_bytes())),
               Expression::Expr(
-                  Operator:: Plus,
+                  Operator::Add,
                   vec![
                   Expression::Expr(
                       Operator::Mul,
@@ -142,7 +153,8 @@ fn expression_parser_test() {
                   Expression::Expr(
                       Operator::Div,
                       vec![
-                      Expression::Num(3),
-                      Expression::Num(3)])]));
+                      Expression::Number(3),
+                      Expression::Number(3)])]));
+   assert_eq!(39, output(program_start_parser("+ * (- (7 1) 2 3) 2 / (9 3 3)".as_bytes())).eval());
 
 }
